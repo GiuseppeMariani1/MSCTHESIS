@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Thesis data and results
+data/
+results/
+*.csv
+*.parquet
+*.h5
+*.xlsx
