@@ -1,0 +1,23 @@
+data:
+  tickers: ["SPY", "QQQ", "GLD", "TLT", "EEM"]
+  start_date: "2000-01-01"
+  end_date: "2025-12-31"
+
+volatility:
+  garch_p: 1
+  garch_q: 1
+
+topology:
+  windows: [20, 50, 100]
+  max_dimension: 1
+  n_landscapes: 5
+
+models:
+  encoder_hidden: 64
+  encoder_layers: 2
+  epsilon: 1e-4
+
+evaluation:
+  test_size: 0.2
+  horizons: [1, 5, 22]
+  loss: ["MSE", "QLIKE"]
