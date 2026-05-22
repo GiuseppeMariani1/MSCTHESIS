@@ -139,10 +139,14 @@ celerybeat.pid
 # RabbitMQ
 mnesia/
 rabbitmq/
-rabbitmq-data/
+rabbitmq-data/raw/
+data/processed/
+data/features/
 
 # ActiveMQ
-activemq-data/
+activemq-data/raw/
+data/processed/
+data/features/
 
 # SageMath parsed files
 *.sage.py
@@ -222,7 +226,9 @@ __marimo__/
 *.ipynb_checkpoints
 
 # Thesis data and results
-data/
+data/raw/
+data/processed/
+data/features/
 results/
 *.csv
 *.parquet

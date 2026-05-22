@@ -1,0 +1,4 @@
+# Replace data/ with specific paths
+data/raw/
+data/processed/
+data/features/
