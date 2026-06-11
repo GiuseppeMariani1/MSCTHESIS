@@ -12,23 +12,23 @@ def load_config(path="config/config.yaml"):
 def download_prices(tickers, start_date, end_date):
     """Download adjusted closing prices from yfinance."""
     print(f"Downloading: {tickers}")
-    raw = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True)
+    raw = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True, progress=False)
     prices = raw["Close"]
     prices.dropna(how="all", inplace=True)
-    print(f"✅ Downloaded {prices.shape[0]} days x {prices.shape[1]} assets")
+    print(f"Downloaded {prices.shape[0]} days x {prices.shape[1]} assets")
     return prices
 
 def compute_log_returns(prices):
     """Compute log returns from price series."""
     log_returns = np.log(prices / prices.shift(1)).dropna()
-    print(f"✅ Log returns shape: {log_returns.shape}")
+    print(f"Log returns shape: {log_returns.shape}")
     return log_returns
 
 def save_data(df, path):
     """Save dataframe to parquet."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_parquet(path)
-    print(f"✅ Saved to {path}")
+    print(f"Saved to {path}")
 
 def run(config_path="config/config.yaml"):
     # Load config

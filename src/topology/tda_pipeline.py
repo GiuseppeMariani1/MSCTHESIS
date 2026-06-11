@@ -32,7 +32,7 @@ from joblib import Parallel, delayed
 import warnings
 warnings.filterwarnings('ignore')
 
-# ── CONFIG ────────────────────────────────────────────────────────────────────
+#  CONFIGURATION (Will be overridden by function arguments, this is a fallback)
 
 WINDOW         = 252    # 1-year rolling window (trading days)
 STEP           = 1      # daily rolling
@@ -45,7 +45,7 @@ N_LANDSCAPES   = 3      # number of landscape functions λ_1, λ_2, λ_3
 GRID_POINTS    = 30     # filtration grid resolution
 GRID_QUANTILE  = 0.95   # quantile of max-death values used to set grid upper bound
 
-# ── POINT CLOUD HELPERS ───────────────────────────────────────────────────────
+# POINT CLOUD HELPERS
 
 def embed_multivariate(returns_window, embed_dim):
     W, n_assets = returns_window.shape
@@ -74,7 +74,7 @@ def reduce_to_pca(X, n_components):
     pca = PCA(n_components=k, svd_solver='randomized', random_state=42)
     return pca.fit_transform(X)
 
-# ── PERSISTENCE DIAGRAM HELPERS ───────────────────────────────────────────────
+# PERSISTENCE DIAGRAM HELPERS
 
 def compute_betti(dgm_h0, dgm_h1):
     betti_0 = int(np.sum(np.isfinite(dgm_h0[:, 1])))
@@ -83,6 +83,7 @@ def compute_betti(dgm_h0, dgm_h1):
 
 
 def compute_persistence_stats(dgm, min_persist=MIN_PERSIST):
+    min_persist = float(min_persist)
     finite = np.isfinite(dgm[:, 1])
     bars   = dgm[finite]
     if len(bars) == 0:
@@ -97,7 +98,7 @@ def compute_persistence_stats(dgm, min_persist=MIN_PERSIST):
     entropy    = float(-(p * np.log(p + 1e-10)).sum())
     return max_pers, total_pers, entropy
 
-# ── PERSISTENCE LANDSCAPE ─────────────────────────────────────────────────────
+# PERSISTENCE LANDSCAPE 
 
 def compute_persistence_landscape(dgm, grid, n_landscapes=N_LANDSCAPES):
     """
@@ -147,7 +148,7 @@ def build_filtration_grid(all_dgms, n_points=GRID_POINTS, quantile=GRID_QUANTILE
     grid_max = float(np.quantile(max_deaths, quantile)) if max_deaths else 1.0
     return np.linspace(0.0, grid_max, n_points)
 
-# ── PER-WINDOW COMPUTATION (Phase 1) ─────────────────────────────────────────
+# PER-WINDOW COMPUTATION (Phase 1)
 
 def compute_window(s, e, returns_data, dates,
                    embed_dim=EMBED_DIM,
@@ -194,7 +195,7 @@ def compute_window(s, e, returns_data, dates,
 
     return scalar_features, dgm_h0, dgm_h1, dates[e - 1]
 
-# ── MAIN PIPELINE ─────────────────────────────────────────────────────────────
+#  MAIN PIPELINE 
 
 def run_tda_pipeline(log_returns_df,
                      window=WINDOW,
@@ -227,9 +228,8 @@ def run_tda_pipeline(log_returns_df,
     slices       = [(s, s + window) for s in range(0, n_days - window + 1, step)]
 
     if verbose:
-        print("=" * 60)
         print("TDA PIPELINE — PERSISTENCE LANDSCAPE VERSION")
-        print("=" * 60)
+        print("_" * 60)
         print(f"  Window:         {window} days")
         print(f"  Step:           {step} days")
         print(f"  Embed dim:      {embed_dim}")
@@ -240,7 +240,7 @@ def run_tda_pipeline(log_returns_df,
         print(f"  Total windows:  {len(slices)}\n")
         print("Phase 1: computing persistence diagrams (parallel)...")
 
-    # ── Phase 1: parallel diagram computation ─────────────────────────────────
+    #  Phase 1: parallel diagram computation 
     raw_results = Parallel(n_jobs=n_jobs, verbose=5)(
         delayed(compute_window)(s, e, returns_data, dates,
                                  embed_dim=embed_dim,
@@ -276,7 +276,7 @@ def run_tda_pipeline(log_returns_df,
         if dgm_h1 is not None:
             prev_dgm = dgm_h1
 
-    # ── Phase 2: build global grid, compute landscapes ─────────────────────────
+    #  Phase 2: build global grid, compute landscapes 
     if verbose:
         print("\nPhase 2: building global filtration grid...")
 
@@ -325,7 +325,7 @@ def run_tda_pipeline(log_returns_df,
 
     return tda_df, grid
 
-# ── STANDALONE EXECUTION ──────────────────────────────────────────────────────
+#STANDALONE EXECUTION
 
 if __name__ == "__main__":
     import joblib
