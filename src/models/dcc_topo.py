@@ -127,8 +127,17 @@ def compute_r2(a_seq, b_seq, X_t_np):
 
 
 if __name__ == "__main__":
-    garch_residuals = pd.read_parquet('data/processed/garch_residuals.parquet')
-    tda_features    = pd.read_parquet('data/processed/tda_features_pi.parquet')
+    import os
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+    from src.data.loader import load_config
+
+    config = load_config()
+    model_cfg = config['models']['topo']
+    paths = config['paths']
+
+    garch_residuals = pd.read_parquet(paths['garch_residuals'])
+    tda_features    = pd.read_parquet(paths['tda_features_pi'])
 
     # Drop betti_0 — constant across all windows, zero information
     if 'betti_0' in tda_features.columns:
@@ -141,7 +150,11 @@ if __name__ == "__main__":
     print(f"Features shape:  {tda_features.shape}")
 
     model, a_seq, b_seq, R_seq, ll_history = fit_dcc_topo(
-        garch_residuals, tda_features, n_iter=500, lr=0.01, verbose=True
+        garch_residuals,
+        tda_features,
+        n_iter=model_cfg['n_iter'],
+        lr=model_cfg['lr'],
+        verbose=True
     )
 
     print(f"\nFinal ll: {ll_history[-1]:.2f}")
@@ -153,8 +166,8 @@ if __name__ == "__main__":
     print("\nR² diagnostics:")
     r2_a, r2_b = compute_r2(a_seq, b_seq, X_t_np)
 
-    # Save results
-    np.save('data/processed/dcc_topo_results_pi.npy', {
+    os.makedirs(os.path.dirname(paths['dcc_topo']), exist_ok=True)
+    np.save(paths['dcc_topo'], {
         'a_seq':      a_seq.detach().numpy(),
         'b_seq':      b_seq.detach().numpy(),
         'R_seq':      R_seq.detach().numpy(),
@@ -163,4 +176,4 @@ if __name__ == "__main__":
         'w_a':        model.w_a.detach().numpy(),
         'w_b':        model.w_b.detach().numpy(),
     })
-    print("Saved to data/processed/dcc_topo_results_pi.npy")
+    print(f"Saved to {paths['dcc_topo']}")

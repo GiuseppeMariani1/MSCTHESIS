@@ -8,11 +8,27 @@ volatility:
   garch_q: 1
 
 topology:
-  windows: [20, 50, 100]
-  max_dimension: 1
-  n_landscapes: 5
+  window: 252
+  step: 1
+  embed_dim: 80
+  pca_dim: 15
+  min_persist: 1e-6
+  n_landscapes: 3
+  grid_points: 30
+  grid_quantile: 0.95
+  n_jobs: -1
 
 models:
+  baseline:
+    n_iter: 500
+    lr: 0.01
+  topo:
+    n_iter: 500
+    lr: 0.01
+  topo_reg:
+    n_iter: 500
+    lr: 0.01
+    lambda_grid: [0.0, 1e-4, 1e-3, 1e-2, 5e-2, 1e-1, 5e-1]
   encoder_hidden: 64
   encoder_layers: 2
   epsilon: 1e-4
@@ -21,3 +37,16 @@ evaluation:
   test_size: 0.2
   horizons: [1, 5, 22]
   loss: ["MSE", "QLIKE"]
+
+paths:
+  prices: data/processed/prices.parquet
+  log_returns: data/processed/log_returns.parquet
+  garch_residuals: data/processed/garch_residuals.parquet
+  tda_features_landscape: data/processed/tda_features_landscape.parquet
+  tda_features_pi: data/processed/tda_features_pi.parquet
+  dcc_baseline: data/processed/dcc_baseline_results.npy
+  dcc_topo: data/processed/dcc_topo_results_pi.npy
+  dcc_topo_reg: data/processed/dcc_topo_reg_results.npy
+  pca_h0: data/processed/pca_h0.pkl
+  pca_h1: data/processed/pca_h1.pkl
+  landscape_grid: data/processed/landscape_grid.npy

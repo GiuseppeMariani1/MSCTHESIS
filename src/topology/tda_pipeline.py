@@ -82,13 +82,13 @@ def compute_betti(dgm_h0, dgm_h1):
     return betti_0, betti_1
 
 
-def compute_persistence_stats(dgm):
+def compute_persistence_stats(dgm, min_persist=MIN_PERSIST):
     finite = np.isfinite(dgm[:, 1])
     bars   = dgm[finite]
     if len(bars) == 0:
         return 0.0, 0.0, 0.0
     lengths = bars[:, 1] - bars[:, 0]
-    lengths = lengths[lengths > MIN_PERSIST]
+    lengths = lengths[lengths > min_persist]
     if len(lengths) == 0:
         return 0.0, 0.0, 0.0
     max_pers   = float(np.max(lengths))
@@ -149,7 +149,10 @@ def build_filtration_grid(all_dgms, n_points=GRID_POINTS, quantile=GRID_QUANTILE
 
 # ── PER-WINDOW COMPUTATION (Phase 1) ─────────────────────────────────────────
 
-def compute_window(s, e, returns_data, dates):
+def compute_window(s, e, returns_data, dates,
+                   embed_dim=EMBED_DIM,
+                   pca_dim=PCA_DIM,
+                   min_persist=MIN_PERSIST):
     """
     Phase 1: compute persistence diagrams and scalar features for window [s, e).
     Landscapes are NOT computed here — they require the global grid built in Phase 2.
@@ -157,15 +160,15 @@ def compute_window(s, e, returns_data, dates):
     Returns: (scalar_features, dgm_h0, dgm_h1, end_date)
     """
     ret_win = returns_data[s:e]
-    if ret_win.shape[0] < EMBED_DIM or np.isnan(ret_win).any():
+    if ret_win.shape[0] < embed_dim or np.isnan(ret_win).any():
         return None, None, None, dates[e - 1]
 
-    X = embed_multivariate(ret_win, EMBED_DIM)
+    X = embed_multivariate(ret_win, embed_dim)
     if X.shape[0] < 3:
         return None, None, None, dates[e - 1]
 
     X = normalize_pointcloud(X)
-    Y = reduce_to_pca(X, PCA_DIM)
+    Y = reduce_to_pca(X, pca_dim)
     if np.isnan(Y).any():
         return None, None, None, dates[e - 1]
 
@@ -177,8 +180,8 @@ def compute_window(s, e, returns_data, dates):
         return None, None, None, dates[e - 1]
 
     _, betti_1 = compute_betti(dgm_h0, dgm_h1)
-    _, _, entropy_h0 = compute_persistence_stats(dgm_h0)
-    max_pers, total_pers, entropy_h1 = compute_persistence_stats(dgm_h1)
+    _, _, entropy_h0 = compute_persistence_stats(dgm_h0, min_persist)
+    max_pers, total_pers, entropy_h1 = compute_persistence_stats(dgm_h1, min_persist)
 
     scalar_features = {
         'betti_1':          betti_1,
@@ -196,6 +199,12 @@ def compute_window(s, e, returns_data, dates):
 def run_tda_pipeline(log_returns_df,
                      window=WINDOW,
                      step=STEP,
+                     embed_dim=EMBED_DIM,
+                     pca_dim=PCA_DIM,
+                     min_persist=MIN_PERSIST,
+                     n_landscapes=N_LANDSCAPES,
+                     grid_points=GRID_POINTS,
+                     grid_quantile=GRID_QUANTILE,
                      n_jobs=-1,
                      verbose=True):
     """
@@ -223,16 +232,20 @@ def run_tda_pipeline(log_returns_df,
         print("=" * 60)
         print(f"  Window:         {window} days")
         print(f"  Step:           {step} days")
-        print(f"  Embed dim:      {EMBED_DIM}")
-        print(f"  PCA dim (Rips): {PCA_DIM}")
-        print(f"  Landscapes:     {N_LANDSCAPES} functions x {GRID_POINTS} grid points")
+        print(f"  Embed dim:      {embed_dim}")
+        print(f"  PCA dim (Rips): {pca_dim}")
+        print(f"  Min persist:    {min_persist}")
+        print(f"  Landscapes:     {n_landscapes} functions x {grid_points} grid points")
         print(f"  Data shape:     {returns_data.shape}")
         print(f"  Total windows:  {len(slices)}\n")
         print("Phase 1: computing persistence diagrams (parallel)...")
 
     # ── Phase 1: parallel diagram computation ─────────────────────────────────
     raw_results = Parallel(n_jobs=n_jobs, verbose=5)(
-        delayed(compute_window)(s, e, returns_data, dates)
+        delayed(compute_window)(s, e, returns_data, dates,
+                                 embed_dim=embed_dim,
+                                 pca_dim=pca_dim,
+                                 min_persist=min_persist)
         for s, e in slices
     )
 
@@ -268,12 +281,12 @@ def run_tda_pipeline(log_returns_df,
         print("\nPhase 2: building global filtration grid...")
 
     grid = build_filtration_grid(dgms_h0 + dgms_h1,
-                                 n_points=GRID_POINTS,
-                                 quantile=GRID_QUANTILE)
+                                 n_points=grid_points,
+                                 quantile=grid_quantile)
 
     if verbose:
-        print(f"  Grid: 0 -> {grid[-1]:.4f}  ({GRID_POINTS} points, "
-              f"{GRID_QUANTILE:.0%} quantile of max-death values)")
+        print(f"  Grid: 0 -> {grid[-1]:.4f}  ({grid_points} points, "
+              f"{grid_quantile:.0%} quantile of max-death values)")
         print(f"\nPhase 2: computing landscapes on fixed grid...")
 
     feature_list = []
@@ -281,15 +294,15 @@ def run_tda_pipeline(log_returns_df,
         row = dict(sf)  # copy scalar features
 
         # H0 landscapes
-        lh0 = compute_persistence_landscape(dh0, grid, N_LANDSCAPES)
-        for k in range(N_LANDSCAPES):
-            for g in range(GRID_POINTS):
+        lh0 = compute_persistence_landscape(dh0, grid, n_landscapes)
+        for k in range(n_landscapes):
+            for g in range(grid_points):
                 row[f'lh0_k{k}_g{g}'] = float(lh0[k, g])
 
         # H1 landscapes
-        lh1 = compute_persistence_landscape(dh1, grid, N_LANDSCAPES)
-        for k in range(N_LANDSCAPES):
-            for g in range(GRID_POINTS):
+        lh1 = compute_persistence_landscape(dh1, grid, n_landscapes)
+        for k in range(n_landscapes):
+            for g in range(grid_points):
                 row[f'lh1_k{k}_g{g}'] = float(lh1[k, g])
 
         feature_list.append(row)
@@ -297,14 +310,14 @@ def run_tda_pipeline(log_returns_df,
     tda_df = pd.DataFrame(feature_list, index=pd.DatetimeIndex(date_list))
 
     n_scalar    = 6
-    n_landscape = 2 * N_LANDSCAPES * GRID_POINTS
+    n_landscape = 2 * n_landscapes * grid_points
     if verbose:
         print(f"\nTDA pipeline complete")
         print(f"  Output shape:   {tda_df.shape}")
         print(f"  Date range:     {tda_df.index[0].date()} -> {tda_df.index[-1].date()}")
         print(f"  Scalar features:    {n_scalar}")
         print(f"  Landscape features: {n_landscape}  "
-              f"({N_LANDSCAPES} functions x {GRID_POINTS} pts x 2 degrees)")
+              f"({n_landscapes} functions x {grid_points} pts x 2 degrees)")
         print(f"  Total features:     {tda_df.shape[1]}")
         print(f"\n  Summary statistics:")
         print(tda_df[['betti_1', 'entropy_h1', 'max_persistence',
@@ -316,13 +329,35 @@ def run_tda_pipeline(log_returns_df,
 
 if __name__ == "__main__":
     import joblib
+    import os
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+    from src.data.loader import load_config
 
-    log_returns = pd.read_parquet('data/processed/log_returns.parquet')
+    config = load_config()
+    topo_cfg = config['topology']
+    paths = config['paths']
 
-    tda_features, grid = run_tda_pipeline(log_returns, n_jobs=-1, verbose=True)
+    log_returns = pd.read_parquet(paths['log_returns'])
 
-    tda_features.to_parquet('data/processed/tda_features_landscape.parquet')
-    print("\nSaved to data/processed/tda_features_landscape.parquet")
+    tda_features, grid = run_tda_pipeline(
+        log_returns,
+        window=topo_cfg['window'],
+        step=topo_cfg['step'],
+        embed_dim=topo_cfg['embed_dim'],
+        pca_dim=topo_cfg['pca_dim'],
+        min_persist=topo_cfg['min_persist'],
+        n_landscapes=topo_cfg['n_landscapes'],
+        grid_points=topo_cfg['grid_points'],
+        grid_quantile=topo_cfg['grid_quantile'],
+        n_jobs=topo_cfg['n_jobs'],
+        verbose=True
+    )
 
-    np.save('data/processed/landscape_grid.npy', grid)
-    print("Saved global filtration grid to data/processed/landscape_grid.npy")
+    os.makedirs(os.path.dirname(paths['tda_features_landscape']), exist_ok=True)
+    tda_features.to_parquet(paths['tda_features_landscape'])
+    print(f"\nSaved to {paths['tda_features_landscape']}")
+
+    os.makedirs(os.path.dirname(paths['landscape_grid']), exist_ok=True)
+    np.save(paths['landscape_grid'], grid)
+    print(f"Saved global filtration grid to {paths['landscape_grid']}")

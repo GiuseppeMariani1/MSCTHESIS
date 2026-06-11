@@ -147,10 +147,14 @@ def lambda_search(z_t, X_t, Q_bar, train_size,
 if __name__ == "__main__":
     import sys, os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+    from src.data.loader import load_config
+
+    config = load_config()
+    paths = config['paths']
 
     # Load data
-    garch_residuals = pd.read_parquet('data/processed/garch_residuals.parquet')
-    tda_features    = pd.read_parquet('data/processed/tda_features_landscape.parquet')
+    garch_residuals = pd.read_parquet(paths['garch_residuals'])
+    tda_features    = pd.read_parquet(paths['tda_features_landscape'])
 
     # Drop betti_0 if present (constant)
     if 'betti_0' in tda_features.columns:
@@ -170,8 +174,13 @@ if __name__ == "__main__":
     X_std  = X_raw.std(axis=0) + 1e-8
     X_t    = torch.tensor((X_raw - X_mean) / X_std, dtype=torch.float32)
 
+    config = load_config()
+    paths = config['paths']
+    topo_reg_cfg = config['models']['topo_reg']
+    eval_cfg = config['evaluation']
+
     T = z_t.shape[0]
-    train_size = int(T * 0.8)
+    train_size = int(T * (1.0 - eval_cfg['test_size']))
     print(f"\nTrain: {train_size} days  |  Test: {T - train_size} days")
 
     Q_bar = compute_Q_bar(z_t[:train_size])
@@ -181,8 +190,15 @@ if __name__ == "__main__":
     print("LAMBDA GRID SEARCH (Ridge regularisation)")
     print("=" * 60)
 
-    results = lambda_search(z_t, X_t, Q_bar, train_size,
-                            lambda_grid=LAMBDA_GRID, n_iter=500, lr=0.01)
+    results = lambda_search(
+        z_t,
+        X_t,
+        Q_bar,
+        train_size,
+        lambda_grid=topo_reg_cfg['lambda_grid'],
+        n_iter=topo_reg_cfg['n_iter'],
+        lr=topo_reg_cfg['lr']
+    )
 
     print("\n" + "=" * 60)
     print("RESULTS (sorted by out-of-sample ll)")
@@ -195,8 +211,13 @@ if __name__ == "__main__":
     print("Fitting final model on full data...")
 
     model, ll_hist = fit_dcc_topo_reg(
-        z_t, X_t, compute_Q_bar(z_t),
-        lambda_l2=best_lambda, n_iter=500, lr=0.01, verbose=True
+        z_t,
+        X_t,
+        compute_Q_bar(z_t),
+        lambda_l2=best_lambda,
+        n_iter=topo_reg_cfg['n_iter'],
+        lr=topo_reg_cfg['lr'],
+        verbose=True
     )
 
     with torch.no_grad():
@@ -208,7 +229,8 @@ if __name__ == "__main__":
     print(f"Improvement over baseline (-4790.84): {ll_final - (-4790.84):.2f}")
 
     #  Save
-    np.save('data/processed/dcc_topo_reg_results.npy', {
+    os.makedirs(os.path.dirname(paths['dcc_topo_reg']), exist_ok=True)
+    np.save(paths['dcc_topo_reg'], {
         'a_seq':       a_seq.detach().numpy(),
         'b_seq':       b_seq.detach().numpy(),
         'R_seq':       R_seq.detach().numpy(),
@@ -221,4 +243,4 @@ if __name__ == "__main__":
         'X_mean':      X_mean,
         'X_std':       X_std,
     })
-    print("Saved to data/processed/dcc_topo_reg_results.npy")
+    print(f"Saved to {paths['dcc_topo_reg']}")

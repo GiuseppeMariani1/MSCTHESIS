@@ -44,8 +44,9 @@ def run(config_path="config/config.yaml"):
     log_returns = compute_log_returns(prices)
 
     # Save
-    save_data(prices,      "data/processed/prices.parquet")
-    save_data(log_returns, "data/processed/log_returns.parquet")
+    paths = config['paths']
+    save_data(prices,      paths['prices'])
+    save_data(log_returns, paths['log_returns'])
 
     return prices, log_returns
 
