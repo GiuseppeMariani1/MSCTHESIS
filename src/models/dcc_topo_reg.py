@@ -380,7 +380,7 @@ if __name__ == "__main__":
 
     ll_final = ll_hist[-1]
     print(f"\nFinal ll (full data): {ll_final:.2f}")
-    print(f"Improvement over baseline (-4790.84): {ll_final - (-4790.84):.2f}")
+    print(f"Improvement over baseline (-4786.44): {ll_final - (-4786.44):.2f}")
 
     # Save
     os.makedirs(os.path.dirname(paths['dcc_topo_reg']), exist_ok=True)

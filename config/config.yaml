@@ -44,10 +44,14 @@ paths:
   log_returns: data/processed/log_returns.parquet
   garch_residuals: data/processed/garch_residuals.parquet
   tda_features_landscape: data/processed/tda_features_landscape.parquet
+  tda_features_lpnorm: data/processed/tda_features_lpnorm.parquet 
   tda_features_pi: data/processed/tda_features_pi.parquet
   dcc_baseline: data/processed/dcc_baseline_results.npy
   dcc_topo: data/processed/dcc_topo_results_pi.npy
+  dcc_topo_lpnorm: data/processed/dcc_topo_lpnorm_results.npy
   dcc_topo_reg: data/processed/dcc_topo_reg_results.npy
   pca_h0: data/processed/pca_h0.pkl
   pca_h1: data/processed/pca_h1.pkl
   landscape_grid: data/processed/landscape_grid.npy
+  permutation_test: data/processed/permutation_test_results.npy        # already there
+  permutation_test_lpnorm: data/processed/permutation_test_lpnorm_results.npy   # add this

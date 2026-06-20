@@ -137,17 +137,22 @@ if __name__ == "__main__":
     paths = config['paths']
 
     garch_residuals = pd.read_parquet(paths['garch_residuals'])
-    tda_features    = pd.read_parquet(paths['tda_features_landscape'])
 
-    # Drop betti_0 — constant across all windows, zero information
-    if 'betti_0' in tda_features.columns:
-        tda_features = tda_features.drop(columns=['betti_0'])
+    # L^p-norm reduced features (literature-matched, H1-only)
+    # the raw 186-column landscape file used in the run that failed the
+    # permutation test. 9 columns: lh1_k0_norm, lh1_k1_norm, lh1_k2_norm
+    # + the 6 scalar features (betti_1, entropy_h0, entropy_h1,
+    # max_persistence, total_persistence, wasserstein).
+    tda_features = pd.read_parquet(
+        paths.get('tda_features_lpnorm', 'data/processed/tda_features_lpnorm.parquet')
+    )
 
     assert (garch_residuals.index == tda_features.index).all(), \
         "Index mismatch between residuals and TDA features"
 
     print(f"Residuals shape: {garch_residuals.shape}")
     print(f"Features shape:  {tda_features.shape}")
+    print(f"Feature columns: {list(tda_features.columns)}")
 
     model, a_seq, b_seq, R_seq, ll_history = fit_dcc_topo(
         garch_residuals,
@@ -166,8 +171,9 @@ if __name__ == "__main__":
     print("\nR² diagnostics:")
     r2_a, r2_b = compute_r2(a_seq, b_seq, X_t_np)
 
-    os.makedirs(os.path.dirname(paths['dcc_topo']), exist_ok=True)
-    np.save(paths['dcc_topo'], {
+    out_path = paths.get('dcc_topo_lpnorm', 'data/processed/dcc_topo_lpnorm_results.npy')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    np.save(out_path, {
         'a_seq':      a_seq.detach().numpy(),
         'b_seq':      b_seq.detach().numpy(),
         'R_seq':      R_seq.detach().numpy(),
@@ -175,5 +181,6 @@ if __name__ == "__main__":
         'll_final':   ll_history[-1],
         'w_a':        model.w_a.detach().numpy(),
         'w_b':        model.w_b.detach().numpy(),
+        'feature_columns': list(tda_features.columns),
     })
-    print(f"Saved to {paths['dcc_topo']}")
+    print(f"Saved to {out_path}")
