@@ -12,7 +12,7 @@ topology:
   step: 1
   embed_dim: 80
   pca_dim: 15
-  min_persist: 1e-6
+  min_persist: 1.0e-6
   n_landscapes: 3
   grid_points: 30
   grid_quantile: 0.95
@@ -28,16 +28,17 @@ models:
   topo_reg:
     n_iter: 500
     lr: 0.01
-    lambda_grid: [0.0, 1e-4, 1e-3, 1e-2, 5e-2, 1e-1, 5e-1]
+    lambda_grid: [0.0, 1.0e-4, 1.0e-3, 1.0e-2, 5.0e-2, 1.0e-1, 5.0e-1]
   encoder_hidden: 64
   encoder_layers: 2
-  epsilon: 1e-4
+  epsilon: 1.0e-4
 
 evaluation:
   test_size: 0.2
   horizons: [1, 5, 22]
   loss: ["MSE", "QLIKE"]
 
+#PATHS TO RESULTS
 paths:
   prices: data/processed/prices.parquet
   log_returns: data/processed/log_returns.parquet
