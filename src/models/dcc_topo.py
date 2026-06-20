@@ -137,7 +137,7 @@ if __name__ == "__main__":
     paths = config['paths']
 
     garch_residuals = pd.read_parquet(paths['garch_residuals'])
-    tda_features    = pd.read_parquet(paths['tda_features_pi'])
+    tda_features    = pd.read_parquet(paths['tda_features_landscape'])
 
     # Drop betti_0 — constant across all windows, zero information
     if 'betti_0' in tda_features.columns:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     )
 
     print(f"\nFinal ll: {ll_history[-1]:.2f}")
-    print(f"Improvement over baseline (-4790.84): {ll_history[-1] - (-4790.84):.2f}")
+    print(f"Improvement over baseline (-4786.44): {ll_history[-1] - (-4786.44):.2f}")
 
     # R² diagnostics
     X_raw = tda_features.values

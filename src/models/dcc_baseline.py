@@ -34,15 +34,25 @@ def fit_dcc_baseline(garch_residuals_df, n_iter=500, lr=0.01, verbose=True):
     T, N = z_t.shape
     Q_bar = compute_Q_bar(z_t)
 
-    a_raw = nn.Parameter(torch.tensor(-2.0, dtype=torch.float32))
-    b_raw = nn.Parameter(torch.tensor(0.5,  dtype=torch.float32))
-    optimizer = torch.optim.Adam([a_raw, b_raw], lr=lr)
+    # Stationarity fix: a and b used to be capped independently (a<=0.3,
+    # b<=0.97) with nothing stopping a+b >= 1, which breaks the DCC
+    # stationarity condition and can make Q_t non-PSD without erroring.
+    # Reparameterize as total persistence `s = a+b` and split fraction `p`,
+    # so a = s*p, b = s*(1-p) -> a+b = s < max_sum is guaranteed by
+    # construction, for every value the raw params can take. No clamping,
+    # no masking, no kink in the gradient.
+    max_sum = 0.9998  # matches the cap used in TopoDCC for comparability
+    total_raw = nn.Parameter(torch.tensor(4.0,  dtype=torch.float32))  # sigmoid(4.0)*0.9998 ≈ 0.980
+    split_raw = nn.Parameter(torch.tensor(-3.5, dtype=torch.float32))  # sigmoid(-3.5)       ≈ 0.029
+    optimizer = torch.optim.Adam([total_raw, split_raw], lr=lr)
     ll_history = []
 
     for i in range(n_iter):
         optimizer.zero_grad()
-        a = torch.sigmoid(a_raw) * 0.3
-        b = torch.sigmoid(b_raw) * 0.97
+        s = torch.sigmoid(total_raw) * max_sum
+        p = torch.sigmoid(split_raw)
+        a = s * p
+        b = s * (1 - p)
         R_seq, ll = dcc_recursion_torch(z_t, a, b, Q_bar)
         loss = -ll
         loss.backward()
@@ -54,8 +64,10 @@ def fit_dcc_baseline(garch_residuals_df, n_iter=500, lr=0.01, verbose=True):
                   f"a+b={a.item()+b.item():.6f} | ll={ll.item():.2f}")
 
     with torch.no_grad():
-        a_final = torch.sigmoid(a_raw) * 0.3
-        b_final = torch.sigmoid(b_raw) * 0.97
+        s = torch.sigmoid(total_raw) * max_sum
+        p = torch.sigmoid(split_raw)
+        a_final = s * p
+        b_final = s * (1 - p)
         R_seq, _ = dcc_recursion_torch(z_t, a_final, b_final, Q_bar)
 
     return a_final.item(), b_final.item(), R_seq, ll_history
@@ -85,4 +97,4 @@ if __name__ == "__main__":
         'll_history': ll_history,
         'R_seq': R_seq.detach().numpy()
     })
-    print(f"✅ Saved to {paths['dcc_baseline']}")
+    print(f" Saved to {paths['dcc_baseline']}")
