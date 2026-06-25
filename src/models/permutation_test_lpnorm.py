@@ -77,7 +77,7 @@ def _permuted_fit_worker(seed, z_np, X_np, n_iter, lr):
 
 
 def run_permutation_test(garch_residuals_df, tda_features_df,
-                         n_permutations=10, n_iter=500, lr=0.01,
+                         n_permutations=20, n_iter=500, lr=0.01,
                          n_jobs=None, seed0=0, real_ll=None):
     """
     Returns: real_ll (float), permuted_lls (np.ndarray), results_df (pd.DataFrame)
