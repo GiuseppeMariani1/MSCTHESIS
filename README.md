@@ -1,14 +1,14 @@
 # Topological Dynamic Conditional Correlations: A Persistence Landscape Approach to Time-Varying Dependence in Financial Markets
 
-**MSc Asset Pricing Thesis — King's College London**
+**MSc Asset Pricing Thesis King's College London**
 
 ---
 
 ## Overview
 
-This repository implements the **TopoDCC** model — a novel extension of the Dynamic Conditional Correlation (DCC) framework that uses topological features derived from persistence landscapes to make the DCC shock-sensitivity and persistence parameters time-varying.
+This repository implements the **TopoDCC** model, an extension of the Dynamic Conditional Correlation (DCC) framework that uses topological features derived from persistence landscapes to make the DCC shock-sensitive and persistence parameters time-varying.
 
-The core idea, motivated by Gidea & Katz (2018), is that the geometric structure of the multivariate return point cloud — captured via persistent homology — carries information about market regime changes that is not explained by volatility, autocorrelation, or realized correlation alone. This topological signal is used to drive the DCC parameters `a_t` and `b_t` at each point in time, rather than fixing them as constants.
+The core idea, motivated by Gidea & Katz (2018), is that the geometric structure of the multivariate return point cloud captured via persistent homology carries information about market regime changes that is not explained by volatility, autocorrelation, or realized correlation alone. This topological signal is used to drive the DCC parameters `a_t` and `b_t` at each point in time, rather than fixing them as constants.
 
 ---
 
@@ -35,11 +35,11 @@ Raw Prices
 
 ### Key Design Choices
 
-- **Assets:** SPY, EEM, GLD, TLT, DBC — chosen for cross-asset geometric diversity (equity, EM, gold, rates, commodities)
-- **Homology degree:** H1 only (loop structure), following Gidea & Katz (2018)
-- **Norm:** L² norm via trapezoidal integration over the global filtration grid — the exact quantity in Gidea & Katz
-- **DCC input:** GARCH(1,1) standardised residuals per asset
-- **Window:** 250 trading days (~1 year), matching Gidea & Katz
+- **Assets:** SPY, EEM, GLD, TLT, DBC all chosen for cross-asset geometric diversity (equity, EM, gold, rates, commodities).
+- **Homology degree:** H1 only (loop structure), following Gidea & Katz (2018).
+- **Norm:** L² norm via trapezoidal integration over the global filtration grid: the exact quantity in Gidea & Katz(2018).
+- **DCC input:** GARCH(1,1) standardised residuals per asset.
+- **Window:** 250 trading days (~1 year), matching Gidea & Katz.
 
 ### TopoDCC Model
 
@@ -83,7 +83,7 @@ The topology-driven `a_t` (shock sensitivity) rises during endogenous crises:
 | COVID (2020) | 0.0209 | -13% |
 | Rate Hikes (2022) | 0.0229 | -4% |
 
-The asymmetry between endogenous crises (GFC, EU Debt — rising `a_t`) and exogenous shocks (COVID — falling `a_t`) is economically meaningful and consistent with the loop-collapse mechanism: during sudden exogenous shocks, cross-asset correlations spike to 1 and the point cloud geometry degenerates, giving the model less topological structure to react to.
+The asymmetry between endogenous crises (GFC, EU Debt: rising `a_t`) and exogenous shocks (COVID: falling `a_t`) is economically meaningful and consistent with the loop-collapse mechanism: during sudden exogenous shocks, cross-asset correlations spike to 1 and the point cloud geometry degenerates, giving the model less topological structure to react to.
 
 ### Multitrack Diagnostics
 The L² norm series is not a proxy for simpler quantities:
@@ -93,7 +93,7 @@ The L² norm series is not a proxy for simpler quantities:
 | Realized volatility | -0.02 | -0.23 | -0.32 |
 | Rolling autocorrelation | +0.06 | +0.11 | +0.09 |
 
-No candidate exceeds the |r| > 0.5 threshold — the topology captures genuinely distinct information.
+No candidate exceeds the |r| > 0.5 threshold: the topology captures genuinely distinct information.
 
 ---
 
@@ -179,4 +179,4 @@ python scripts/multitrack.py
 
 ---
 
-*King's College London — MSc Asset Pricing — 2026*
+*King's College London MSc Asset Pricing 2026*
