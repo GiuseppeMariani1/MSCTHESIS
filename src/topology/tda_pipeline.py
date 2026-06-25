@@ -34,10 +34,10 @@ warnings.filterwarnings('ignore')
 
 #  CONFIGURATION (Will be overridden by function arguments, this is a fallback)
 
-WINDOW         = 252    # 1-year rolling window (trading days)
+WINDOW         = 250  # 1-year rolling window (trading days)
 STEP           = 1      # daily rolling
-EMBED_DIM      = 80     # delay-embedding dimension
-PCA_DIM        = 15     # PCA reduction before Ripser
+EMBED_DIM      = 5    # delay-embedding dimension
+PCA_DIM        = 10     # PCA reduction before Ripser
 MIN_PERSIST    = 1e-6   # minimum bar length to count as significant
 
 # Persistence landscape settings

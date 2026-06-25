@@ -83,6 +83,8 @@ if __name__ == "__main__":
     paths = config['paths']
 
     garch_residuals = pd.read_parquet(paths['garch_residuals'])
+
+
     a, b, R_seq, ll_history = fit_dcc_baseline(
         garch_residuals,
         n_iter=model_cfg['n_iter'],

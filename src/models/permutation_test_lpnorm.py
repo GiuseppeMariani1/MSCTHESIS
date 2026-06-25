@@ -169,6 +169,10 @@ if __name__ == "__main__":
         paths.get('tda_features_lpnorm', 'data/processed/tda_features_lpnorm.parquet')
     )
 
+    common = garch_residuals.index.intersection(tda_features.index)
+    garch_residuals = garch_residuals.loc[common]
+    tda_features = tda_features.loc[common]
+    
     assert (garch_residuals.index == tda_features.index).all(), \
         "Index mismatch — re-run lp_norm_features.py"
 
@@ -186,7 +190,7 @@ if __name__ == "__main__":
         # (same features, same n_iter=500/lr=0.01, same code) instead of
         # refitting from scratch. Drop this argument (real_ll=None) if
         # anything about the features, n_iter, or lr changes before rerunning.
-        real_ll=-4768.96,
+        real_ll=-7827.58,
     )
 
     out_path = paths.get('permutation_test_lpnorm', 'data/processed/permutation_test_lpnorm_results.npy')

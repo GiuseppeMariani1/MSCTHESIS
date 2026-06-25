@@ -1,6 +1,6 @@
 data:
-  tickers: ["SPY", "QQQ", "GLD", "TLT", "EEM"]
-  start_date: "2000-01-01"
+  tickers: ["SPY", "EEM", "GLD", "TLT", "DBC"]
+  start_date: "2006-01-03"
   end_date: "2025-12-31"
 
 volatility:
@@ -8,10 +8,10 @@ volatility:
   garch_q: 1
 
 topology:
-  window: 252
+  window: 250
   step: 1
-  embed_dim: 80
-  pca_dim: 15
+  embed_dim: 5
+  pca_dim: 10
   min_persist: 1.0e-6
   n_landscapes: 3
   grid_points: 30

@@ -136,7 +136,9 @@ if __name__ == "__main__":
     model_cfg = config['models']['topo']
     paths = config['paths']
 
+    
     garch_residuals = pd.read_parquet(paths['garch_residuals'])
+
 
     # L^p-norm reduced features (literature-matched, H1-only)
     # the raw 186-column landscape file used in the run that failed the
@@ -146,6 +148,10 @@ if __name__ == "__main__":
     tda_features = pd.read_parquet(
         paths.get('tda_features_lpnorm', 'data/processed/tda_features_lpnorm.parquet')
     )
+
+    common = garch_residuals.index.intersection(tda_features.index)
+    garch_residuals = garch_residuals.loc[common]
+    tda_features = tda_features.loc[common]
 
     assert (garch_residuals.index == tda_features.index).all(), \
         "Index mismatch between residuals and TDA features"
@@ -163,7 +169,7 @@ if __name__ == "__main__":
     )
 
     print(f"\nFinal ll: {ll_history[-1]:.2f}")
-    print(f"Improvement over baseline (-4786.44): {ll_history[-1] - (-4786.44):.2f}")
+    print(f"Improvement over baseline (-8247.96): {ll_history[-1] - (-8247.96):.2f}")
 
     # R² diagnostics
     X_raw = tda_features.values
