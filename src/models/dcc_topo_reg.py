@@ -25,12 +25,6 @@ Performance notes (see PR discussion):
     context tends to be slower and flakier than just running in series.)
   - lambda_search no longer recomputes a_seq/b_seq after training; it
     reuses the pass already done at the end of fit_dcc_topo_reg.
-  - NOT YET DONE: the per-timestep loop inside dcc_topo_recursion
-    (in dcc_topo.py) is still the dominant cost per iteration — likely a
-    Python for-loop with a matrix inversion/slogdet per timestep. That
-    needs dcc_topo.py to fix (torch.jit.script the loop, and/or batch the
-    inversion across time with torch.linalg.inv on a stacked tensor where
-    possible). Not addressed here because that file wasn't provided.
 
 Usage:
   python src/models/dcc_topo_reg.py
@@ -301,19 +295,27 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device: {device}")
 
-    # Load data
+    # Load data — CHANGED: now reads the current 9-feature lpnorm summary,
+    # not the old 186-column raw landscape file.
     garch_residuals = pd.read_parquet(paths['garch_residuals'])
-    tda_features    = pd.read_parquet(paths['tda_features_landscape'])
+    tda_features    = pd.read_parquet(paths['tda_features_lpnorm'])
 
-    # Drop betti_0 if present (constant)
+    # Drop betti_0 if present (constant) — kept as a harmless guard; the
+    # current lpnorm feature set doesn't include betti_0 at all.
     if 'betti_0' in tda_features.columns:
         tda_features = tda_features.drop(columns=['betti_0'])
 
-    assert (garch_residuals.index == tda_features.index).all(), \
-        "Index mismatch — re-run tda_pipeline.py"
+    # CHANGED: garch_residuals (full return series) and tda_features
+    # (starts later — needs a burn-in window before TDA can compute
+    # anything) have different lengths by construction. Align to the
+    # shared dates instead of asserting equal length.
+    common_dates = garch_residuals.index.intersection(tda_features.index)
+    garch_residuals = garch_residuals.loc[common_dates]
+    tda_features = tda_features.loc[common_dates]
 
     print(f"Residuals: {garch_residuals.shape}")
     print(f"Features:  {tda_features.shape}")
+    print(f"(aligned to {len(common_dates)} shared dates)")
 
     # Tensors
     z_t = torch.tensor(garch_residuals.values, dtype=torch.float32)
@@ -379,8 +381,22 @@ if __name__ == "__main__":
         R_seq, _ = dcc_topo_recursion(z_t.to(device), a_seq, b_seq, compute_Q_bar(z_t).to(device))
 
     ll_final = ll_hist[-1]
+
+    # CHANGED: baseline comparison now loaded from the actual current
+    # dcc_baseline_results.npy instead of a hardcoded stale value
+    # (-4786.44, left over from the old 5060-row/186-feature run).
+    try:
+        baseline_results = np.load(paths['dcc_baseline'], allow_pickle=True).item()
+        baseline_ll = baseline_results['ll_final']
+    except (FileNotFoundError, KeyError):
+        baseline_ll = None
+        print("\n  WARNING: could not load dcc_baseline_results.npy — "
+              "run stage 4 first to get a baseline comparison.")
+
     print(f"\nFinal ll (full data): {ll_final:.2f}")
-    print(f"Improvement over baseline (-4786.44): {ll_final - (-4786.44):.2f}")
+    if baseline_ll is not None:
+        print(f"Baseline ll (from dcc_baseline_results.npy): {baseline_ll:.2f}")
+        print(f"Improvement over baseline: {ll_final - baseline_ll:.2f}")
 
     # Save
     os.makedirs(os.path.dirname(paths['dcc_topo_reg']), exist_ok=True)
@@ -396,5 +412,6 @@ if __name__ == "__main__":
         'lambda_results': results.to_dict(),
         'X_mean':      X_mean,
         'X_std':       X_std,
+        'feature_columns': list(tda_features.columns),
     })
     print(f"Saved to {paths['dcc_topo_reg']}")

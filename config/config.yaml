@@ -28,7 +28,7 @@ models:
   topo_reg:
     n_iter: 500
     lr: 0.01
-    lambda_grid: [0.0, 1.0e-4, 1.0e-3, 1.0e-2, 5.0e-2, 1.0e-1, 5.0e-1]
+    lambda_grid: [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000]
   encoder_hidden: 64
   encoder_layers: 2
   epsilon: 1.0e-4
